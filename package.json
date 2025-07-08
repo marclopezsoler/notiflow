@@ -1,0 +1,56 @@
+{
+  "name": "notiflow",
+  "version": "1.0.0",
+  "description": "A lightweight React notification/toast system with hooks & context",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --tsconfig tsconfig.build.json",
+    "build:types": "tsc -p tsconfig.build.json"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.3"
+  },
+  "keywords": [
+    "react",
+    "notifications",
+    "toast",
+    "hooks",
+    "context",
+    "styled-components"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marclopezsoler/notiflow"
+  },
+  "homepage": "https://notiflow.marclopez.xyz/",
+  "dependencies": {
+    "styled-components": "^6.1.19"
+  },
+  "author": {
+    "name": "Marc López",
+    "email": "info@marclopez.xyz",
+    "url": "https://marclopez.xyz"
+  }
+}
