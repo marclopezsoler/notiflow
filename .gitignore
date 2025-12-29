@@ -26,5 +26,3 @@ dist-ssr
 dist
 
 .env
-
-package-lock.json
