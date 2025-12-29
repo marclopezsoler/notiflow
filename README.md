@@ -164,6 +164,7 @@ interface UseNotificationsResult {
   - `type: 'success' | 'error' | 'info' | 'alert' | 'none'`
   - `duration: number` — milliseconds before auto-dismiss (`-1` for persistent)
   - `theme?: { borderColor, backgroundColor, fontColor }` — custom colors
+  - `theme?: { borderColor, backgroundColor, fontColor }` — custom colors (use hex strings to ensure full opacity/transparency control)
   - `hasIcon?: boolean` — show default icon
   - `customIcon?: ReactNode` — render a custom icon or component instead of the default icon
   - `onClick?: () => void` — callback when toast clicked

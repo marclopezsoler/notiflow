@@ -20,6 +20,8 @@ export const NotificationWrapper = styled.div<{
   $canClose: boolean;
   $veticalAlign: "top" | "bottom";
   $horizontalAlign: "left" | "middle" | "right";
+  $dragX?: number;
+  $dragY?: number;
 }>`
   position: fixed;
   z-index: ${({ $index }) => 9999 - $index};
@@ -60,7 +62,6 @@ export const NotificationWrapper = styled.div<{
   max-width: min(320px, 90%);
   width: fit-content;
   padding: 12px 20px;
-  padding-right: ${({ $canClose }) => ($canClose ? "38px" : "20px")};
   border-radius: 8px;
   user-select: ${({ $isClickable }) => ($isClickable ? "auto" : "none")};
   cursor: ${({ $isClickable }) => ($isClickable ? "pointer" : "default")};
@@ -72,25 +73,36 @@ export const NotificationWrapper = styled.div<{
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 
-  ${({ $horizontalAlign, $veticalAlign, $mounted, $isExiting, $index }) => {
+  ${({
+    $horizontalAlign,
+    $veticalAlign,
+    $mounted,
+    $isExiting,
+    $index,
+    $dragX = 0,
+    $dragY = 0,
+  }) => {
     const base = 1 - $index * 0.02;
     const entryY = $veticalAlign === "top" ? "-50px" : "50px";
     const exitY = entryY;
     const tx = $horizontalAlign === "middle" ? "-50%" : "0";
-    const ty = $isExiting ? exitY : $mounted ? "0" : entryY;
+    const hasActiveOffset = Math.abs($dragX) > 0 || Math.abs($dragY) > 0;
+    const ty = $isExiting && !hasActiveOffset ? exitY : $mounted ? "0" : entryY;
     const scale = $isExiting ? base * 0.975 : $mounted ? base : base * 0.975;
     const opacity = $isExiting ? 0 : $mounted ? 1 : 0;
 
     return css`
-      transform: translateX(${tx}) translateY(${ty}) scale(${scale});
+      transform: translateX(${tx}) translateY(${ty}) scale(${scale})
+        translate(${$dragX}px, ${$dragY}px);
       opacity: ${opacity};
       transition: top 0.3s ease, bottom 0.3s ease, transform 0.2s ease,
         opacity 0.2s ease;
     `;
   }}
 
-  &:hover {
-    .close-icon-container {
+  &:hover,
+  &:focus-within {
+    .close-button {
       opacity: 1;
     }
   }
@@ -142,29 +154,36 @@ export const NotificationWrapper = styled.div<{
     color: ${({ $color }) => $color};
   }
 
-  .close-icon-container {
+  .close-button {
     position: absolute;
-    top: 4px;
-    right: 4px;
-
+    top: -10px;
+    right: -10px;
     opacity: 0;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 50%;
+    color: ${({ $color }) => $color};
+    background: ${({ $bg }) => $bg};
+    border: 1px solid ${({ $border }) => hexToRgba($border, 0.6)};
 
-    transition: 0.25s;
+    transition: opacity 0.25s ease, background 0.25s ease;
+  }
 
-    .close-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 4px;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      color: ${({ $color }) => $color};
-      cursor: pointer;
-      transition: background 0.25s ease;
-      &:hover {
-        background: ${({ $border }) => hexToRgba($border, 0.25)};
-      }
+  .close-button .close-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    color: ${({ $color }) => $color};
+    transition: background 0.25s ease;
+  }
+
+  @media (max-width: 768px) {
+    .close-button {
+      opacity: 1;
     }
   }
 `;

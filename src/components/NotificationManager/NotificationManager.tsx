@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 
 import { useNotifications } from "../../hooks/useNotifications";
 
@@ -27,6 +27,16 @@ const ORDER = [
 
 export default function NotificationManager() {
   const { mode, notifications, exitNotification } = useNotifications();
+  const previousIndexes = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const aliveIds = new Set(notifications.map((n) => n.id));
+    Object.keys(previousIndexes.current).forEach((id) => {
+      if (!aliveIds.has(id)) {
+        delete previousIndexes.current[id];
+      }
+    });
+  }, [notifications]);
 
   const groups = useMemo(() => {
     const acc: Record<string, NotificationProps[]> = {};
@@ -43,17 +53,29 @@ export default function NotificationManager() {
       {ORDER.map((alignKey) => {
         const bucket = groups[alignKey];
         if (!bucket) return null;
-        return bucket
-          .slice(0, 7)
-          .map((n, idx) => (
+
+        let activeIndex = 0;
+        return bucket.slice(0, 7).map((n) => {
+          const currentIndex = n.isExiting
+            ? previousIndexes.current[n.id] ?? activeIndex
+            : activeIndex;
+
+          if (!n.isExiting) {
+            activeIndex += 1;
+          }
+
+          previousIndexes.current[n.id] = currentIndex;
+
+          return (
             <Notification
               key={n.id}
               {...n}
               colored={n.colored ?? "full"}
-              index={idx}
+              index={currentIndex}
               onClose={() => exitNotification(n.id)}
             />
-          ));
+          );
+        });
       })}
     </>
   );
@@ -123,7 +145,7 @@ function Notification(props: NotificationProps) {
     customIcon,
   } = props;
 
-  const { mode, lightTheme, darkTheme } = useNotifications();
+  const { mode, lightTheme, darkTheme, exitNotification } = useNotifications();
 
   const { bg, border, color } = computeColors(
     colored,
@@ -140,6 +162,72 @@ function Notification(props: NotificationProps) {
   }, []);
 
   const Icon = iconMap[type];
+
+  const DRAG_CLOSE_DISTANCE = 100;
+  const DRAG_RELEASE_PUSH = 120;
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const clickSuppressedRef = useRef(false);
+
+  const updateDragOffset = (value: { x: number; y: number }) => {
+    dragOffsetRef.current = value;
+    setDragOffset(value);
+  };
+
+  const finalizeDrag = (shouldClose: boolean) => {
+    const { x, y } = dragOffsetRef.current;
+    const shouldPushX = Math.abs(x) > 6;
+    const shouldPushY = Math.abs(y) > 6;
+
+    if (shouldClose) {
+      updateDragOffset({
+        x: x + (shouldPushX ? Math.sign(x) * DRAG_RELEASE_PUSH : 0),
+        y: y + (shouldPushY ? Math.sign(y) * DRAG_RELEASE_PUSH : 0),
+      });
+      exitNotification(id);
+    } else {
+      updateDragOffset({ x: 0, y: 0 });
+    }
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    dragStartRef.current = { x: event.clientX, y: event.clientY };
+    clickSuppressedRef.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragStartRef.current) return;
+    const dx = event.clientX - dragStartRef.current.x;
+    const dy = event.clientY - dragStartRef.current.y;
+    updateDragOffset({ x: dx, y: dy });
+    if (Math.hypot(dx, dy) > 4) {
+      clickSuppressedRef.current = true;
+    }
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragStartRef.current) return;
+    const distance = Math.hypot(
+      dragOffsetRef.current.x,
+      dragOffsetRef.current.y
+    );
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    finalizeDrag(distance > DRAG_CLOSE_DISTANCE);
+    dragStartRef.current = null;
+  };
+
+  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragStartRef.current) return;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    finalizeDrag(false);
+    dragStartRef.current = null;
+  };
+
+  const isAssertive = type === "alert" || type === "error";
+  const role = isAssertive ? "alert" : "status";
+  const ariaLive = isAssertive ? "assertive" : "polite";
 
   let veticalAlign: "top" | "bottom" = "top";
   let horizontalAlign: "left" | "middle" | "right" = "middle";
@@ -160,14 +248,27 @@ function Notification(props: NotificationProps) {
       $bg={bg}
       $border={border}
       $color={color}
+      $dragX={dragOffset.x}
+      $dragY={dragOffset.y}
+      role={role}
+      aria-live={ariaLive}
+      aria-atomic="true"
       onClick={
         onClick
           ? (e) => {
+              if (clickSuppressedRef.current) {
+                clickSuppressedRef.current = false;
+                return;
+              }
               e.stopPropagation();
               onClick();
             }
           : undefined
       }
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
     >
       {customIcon ? (
         <div className="custom-icon">{customIcon}</div>
@@ -184,8 +285,16 @@ function Notification(props: NotificationProps) {
         {subMessage && <span className="submessage">{subMessage}</span>}
       </div>
       {canClose && onClose && (
-        <div
-          className="close-icon-container"
+        <button
+          type="button"
+          className="close-button"
+          aria-label="Dismiss notification"
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          onPointerUp={(event) => {
+            event.stopPropagation();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             onClose(id);
@@ -194,7 +303,7 @@ function Notification(props: NotificationProps) {
           <div className="close-icon">
             <CloseIcon />
           </div>
-        </div>
+        </button>
       )}
     </NotificationWrapper>
   );
