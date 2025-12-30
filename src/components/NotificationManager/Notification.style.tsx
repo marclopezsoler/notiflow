@@ -65,6 +65,7 @@ export const NotificationWrapper = styled.div<{
   border-radius: 8px;
   user-select: ${({ $isClickable }) => ($isClickable ? "auto" : "none")};
   cursor: ${({ $isClickable }) => ($isClickable ? "pointer" : "default")};
+  touch-action: none;
 
   background: ${({ $bg }) => hexToRgba($bg, 0.6)};
   border: 1px solid ${({ $border }) => hexToRgba($border, 0.6)};
