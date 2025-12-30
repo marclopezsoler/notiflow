@@ -169,6 +169,7 @@ function Notification(props: NotificationProps) {
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const clickSuppressedRef = useRef(false);
+  const isDraggingOutRef = useRef(false);
 
   const updateDragOffset = (value: { x: number; y: number }) => {
     dragOffsetRef.current = value;
@@ -205,6 +206,19 @@ function Notification(props: NotificationProps) {
     if (Math.hypot(dx, dy) > 4) {
       clickSuppressedRef.current = true;
     }
+
+    const distance = Math.hypot(dx, dy);
+    if (
+      distance > DRAG_CLOSE_DISTANCE &&
+      !isDraggingOutRef.current &&
+      dragStartRef.current
+    ) {
+      isDraggingOutRef.current = true;
+      finalizeDrag(true);
+      const target = event.currentTarget;
+      target.releasePointerCapture?.(event.pointerId);
+      dragStartRef.current = null;
+    }
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
@@ -216,6 +230,7 @@ function Notification(props: NotificationProps) {
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     finalizeDrag(distance > DRAG_CLOSE_DISTANCE);
     dragStartRef.current = null;
+    isDraggingOutRef.current = false;
   };
 
   const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
@@ -223,6 +238,7 @@ function Notification(props: NotificationProps) {
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     finalizeDrag(false);
     dragStartRef.current = null;
+    isDraggingOutRef.current = false;
   };
 
   const isAssertive = type === "alert" || type === "error";
