@@ -13,6 +13,8 @@ interface NotificationContextValue {
   toggleMode: () => void;
   lightTheme: Record<NotificationProps["type"], NotificationThemeType>;
   darkTheme: Record<NotificationProps["type"], NotificationThemeType>;
+  pauseAutoClose: (id: string) => void;
+  resumeAutoClose: (id: string) => void;
 }
 
 export const NotificationContext =

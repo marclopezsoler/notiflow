@@ -16,6 +16,8 @@ export function useNotifications(): {
   toggleMode: () => void;
   lightTheme: Record<NotificationProps["type"], NotificationThemeType>;
   darkTheme: Record<NotificationProps["type"], NotificationThemeType>;
+  pauseAutoClose: (id: string) => void;
+  resumeAutoClose: (id: string) => void;
 } {
   const ctx = useContext(NotificationContext);
   if (!ctx) {

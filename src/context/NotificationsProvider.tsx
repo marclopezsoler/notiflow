@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -18,6 +19,13 @@ import type {
 import { ThemeProvider } from "styled-components";
 
 const STORAGE_KEY = "notiflow-theme";
+
+function generateNotificationId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `notif-${Math.random().toString(36).slice(2)}-${Date.now()}`
+  );
+}
 
 function detectInitialMode(defaultMode?: ThemeMode): ThemeMode {
   if (defaultMode) return defaultMode;
@@ -36,6 +44,34 @@ export function NotificationsProvider({
   darkTheme,
 }: NotificationsProviderProps & { children: ReactNode }) {
   const globalConfig = getNotificationConfig();
+  const isMounted = useRef(true);
+  const autoCloseTimers = useRef<
+    Record<
+      string,
+      {
+        timer?: ReturnType<typeof setTimeout>;
+        expiresAt: number;
+        remaining: number;
+      }
+    >
+  >({});
+  const animationTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {}
+  );
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      Object.values(autoCloseTimers.current).forEach((entry) => {
+        if (entry.timer) {
+          clearTimeout(entry.timer);
+        }
+      });
+      Object.values(animationTimers.current).forEach((timer) =>
+        clearTimeout(timer)
+      );
+    };
+  }, []);
 
   const [mode, _setMode] = useState<ThemeMode>(() =>
     detectInitialMode(defaultMode)
@@ -75,18 +111,64 @@ export function NotificationsProvider({
   const [notifications, setNotifications] = useState<NotificationProps[]>([]);
 
   const exitNotification = useCallback((id: string) => {
+    const autoEntry = autoCloseTimers.current[id];
+    if (autoEntry) {
+      if (autoEntry.timer) {
+        clearTimeout(autoEntry.timer);
+      }
+      delete autoCloseTimers.current[id];
+    }
+
     setNotifications((all) =>
       all.map((n) => (n.id === id ? { ...n, isExiting: true } : n))
     );
-    setTimeout(
-      () => setNotifications((all) => all.filter((n) => n.id !== id)),
-      200
-    );
+    const animationTimer = animationTimers.current[id];
+    if (animationTimer) {
+      clearTimeout(animationTimer);
+    }
+
+    animationTimers.current[id] = setTimeout(() => {
+      if (!isMounted.current) {
+        return;
+      }
+      setNotifications((all) => all.filter((n) => n.id !== id));
+      delete animationTimers.current[id];
+    }, 200);
   }, []);
+
+  const pauseAutoClose = useCallback((id: string) => {
+    const entry = autoCloseTimers.current[id];
+    if (!entry || !entry.timer) return;
+    const remaining = Math.max(0, entry.expiresAt - Date.now());
+    clearTimeout(entry.timer);
+    autoCloseTimers.current[id] = {
+      ...entry,
+      remaining,
+      timer: undefined,
+    };
+  }, []);
+
+  const resumeAutoClose = useCallback(
+    (id: string) => {
+      const entry = autoCloseTimers.current[id];
+      if (!entry || entry.timer) return;
+      if (entry.remaining <= 0) {
+        exitNotification(id);
+        return;
+      }
+      const timer = setTimeout(() => exitNotification(id), entry.remaining);
+      autoCloseTimers.current[id] = {
+        ...entry,
+        timer,
+        expiresAt: Date.now() + entry.remaining,
+      };
+    },
+    [exitNotification]
+  );
 
   const notify = useCallback(
     (notif: Omit<NotificationProps, "id" | "isExiting">) => {
-      const id = crypto.randomUUID();
+      const id = generateNotificationId();
       const conf = getNotificationConfig();
 
       const finalNotif: NotificationProps = {
@@ -101,8 +183,15 @@ export function NotificationsProvider({
       };
 
       setNotifications((all) => [finalNotif, ...all]);
-      finalNotif.duration !== -1 &&
-        setTimeout(() => exitNotification(id), finalNotif.duration);
+
+      if (finalNotif.duration !== -1) {
+        const expiresAt = Date.now() + (finalNotif.duration ?? 0);
+        autoCloseTimers.current[id] = {
+          timer: setTimeout(() => exitNotification(id), finalNotif.duration),
+          expiresAt,
+          remaining: finalNotif.duration ?? 0,
+        };
+      }
     },
     [exitNotification]
   );
@@ -116,6 +205,8 @@ export function NotificationsProvider({
       toggleMode,
       lightTheme: lightTheme ?? globalConfig.lightTheme,
       darkTheme: darkTheme ?? globalConfig.darkTheme,
+      pauseAutoClose,
+      resumeAutoClose,
     }),
     [
       notifications,
@@ -125,6 +216,8 @@ export function NotificationsProvider({
       toggleMode,
       lightTheme,
       darkTheme,
+      pauseAutoClose,
+      resumeAutoClose,
     ]
   );
 

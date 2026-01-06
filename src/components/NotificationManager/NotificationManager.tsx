@@ -145,7 +145,25 @@ function Notification(props: NotificationProps) {
     customIcon,
   } = props;
 
-  const { mode, lightTheme, darkTheme, exitNotification } = useNotifications();
+  const {
+    mode,
+    lightTheme,
+    darkTheme,
+    exitNotification,
+    pauseAutoClose,
+    resumeAutoClose,
+  } = useNotifications();
+  const handlePause = () => {
+    if (canClose) {
+      pauseAutoClose(id);
+    }
+  };
+
+  const handleResume = () => {
+    if (canClose) {
+      resumeAutoClose(id);
+    }
+  };
 
   const { bg, border, color } = computeColors(
     colored,
@@ -170,6 +188,7 @@ function Notification(props: NotificationProps) {
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const clickSuppressedRef = useRef(false);
   const isDraggingOutRef = useRef(false);
+  const isDragEnabled = !!canClose;
 
   const updateDragOffset = (value: { x: number; y: number }) => {
     dragOffsetRef.current = value;
@@ -193,13 +212,14 @@ function Notification(props: NotificationProps) {
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isDragEnabled) return;
     dragStartRef.current = { x: event.clientX, y: event.clientY };
     clickSuppressedRef.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragStartRef.current) return;
+    if (!isDragEnabled || !dragStartRef.current) return;
     const dx = event.clientX - dragStartRef.current.x;
     const dy = event.clientY - dragStartRef.current.y;
     updateDragOffset({ x: dx, y: dy });
@@ -222,7 +242,7 @@ function Notification(props: NotificationProps) {
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragStartRef.current) return;
+    if (!isDragEnabled || !dragStartRef.current) return;
     const distance = Math.hypot(
       dragOffsetRef.current.x,
       dragOffsetRef.current.y
@@ -234,7 +254,7 @@ function Notification(props: NotificationProps) {
   };
 
   const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragStartRef.current) return;
+    if (!isDragEnabled || !dragStartRef.current) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     finalizeDrag(false);
     dragStartRef.current = null;
@@ -269,6 +289,8 @@ function Notification(props: NotificationProps) {
       role={role}
       aria-live={ariaLive}
       aria-atomic="true"
+      onPointerEnter={canClose ? handlePause : undefined}
+      onPointerLeave={canClose ? handleResume : undefined}
       onClick={
         onClick
           ? (e) => {
