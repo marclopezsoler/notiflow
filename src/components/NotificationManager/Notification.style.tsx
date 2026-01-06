@@ -22,6 +22,7 @@ export const NotificationWrapper = styled.div<{
   $horizontalAlign: "left" | "middle" | "right";
   $dragX?: number;
   $dragY?: number;
+  $subMessageLines?: number;
 }>`
   position: fixed;
   z-index: ${({ $index }) => 9999 - $index};
@@ -125,7 +126,7 @@ export const NotificationWrapper = styled.div<{
     opacity: 0.8;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: ${({ $subMessageLines = 2 }) => $subMessageLines};
     overflow: hidden;
     text-overflow: ellipsis;
   }

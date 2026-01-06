@@ -166,6 +166,24 @@ export function NotificationsProvider({
     [exitNotification]
   );
 
+  const pauseAllAutoClose = useCallback(() => {
+    Object.entries(autoCloseTimers.current).forEach(([id, entry]) => {
+      if (!entry.timer) return;
+      pauseAutoClose(id);
+    });
+  }, [pauseAutoClose]);
+
+  const resumeAllAutoClose = useCallback(() => {
+    Object.entries(autoCloseTimers.current).forEach(([id, entry]) => {
+      if (entry.timer) return;
+      if (entry.remaining <= 0) {
+        exitNotification(id);
+        return;
+      }
+      resumeAutoClose(id);
+    });
+  }, [exitNotification, resumeAutoClose]);
+
   const notify = useCallback(
     (notif: Omit<NotificationProps, "id" | "isExiting">) => {
       const id = generateNotificationId();
@@ -207,6 +225,8 @@ export function NotificationsProvider({
       darkTheme: darkTheme ?? globalConfig.darkTheme,
       pauseAutoClose,
       resumeAutoClose,
+      pauseAllAutoClose,
+      resumeAllAutoClose,
     }),
     [
       notifications,
@@ -218,6 +238,8 @@ export function NotificationsProvider({
       darkTheme,
       pauseAutoClose,
       resumeAutoClose,
+      pauseAllAutoClose,
+      resumeAllAutoClose,
     ]
   );
 

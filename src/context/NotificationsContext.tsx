@@ -15,6 +15,8 @@ interface NotificationContextValue {
   darkTheme: Record<NotificationProps["type"], NotificationThemeType>;
   pauseAutoClose: (id: string) => void;
   resumeAutoClose: (id: string) => void;
+  pauseAllAutoClose: () => void;
+  resumeAllAutoClose: () => void;
 }
 
 export const NotificationContext =

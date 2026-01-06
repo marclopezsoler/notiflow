@@ -143,6 +143,7 @@ function Notification(props: NotificationProps) {
     align,
     colored = "full",
     customIcon,
+    subMessageNLines,
   } = props;
 
   const {
@@ -152,6 +153,8 @@ function Notification(props: NotificationProps) {
     exitNotification,
     pauseAutoClose,
     resumeAutoClose,
+    pauseAllAutoClose,
+    resumeAllAutoClose,
   } = useNotifications();
   const handlePause = () => {
     if (canClose) {
@@ -286,11 +289,18 @@ function Notification(props: NotificationProps) {
       $color={color}
       $dragX={dragOffset.x}
       $dragY={dragOffset.y}
+      $subMessageLines={subMessageNLines}
       role={role}
       aria-live={ariaLive}
       aria-atomic="true"
-      onPointerEnter={canClose ? handlePause : undefined}
-      onPointerLeave={canClose ? handleResume : undefined}
+      onPointerEnter={() => {
+        handlePause();
+        pauseAllAutoClose();
+      }}
+      onPointerLeave={() => {
+        handleResume();
+        resumeAllAutoClose();
+      }}
       onClick={
         onClick
           ? (e) => {

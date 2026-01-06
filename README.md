@@ -165,6 +165,7 @@ interface UseNotificationsResult {
   - `duration: number` — milliseconds before auto-dismiss (`-1` for persistent)
   - `theme?: { borderColor, backgroundColor, fontColor }` — custom colors
   - `theme?: { borderColor, backgroundColor, fontColor }` — custom colors (use hex strings to ensure full opacity/transparency control)
+  - `subMessageNLines?: number` — when provided, clamps the submessage to this many lines and adds an ellipsis for overflow (default: 2)
   - `hasIcon?: boolean` — show default icon
   - `customIcon?: ReactNode` — render a custom icon or component instead of the default icon
   - `onClick?: () => void` — callback when toast clicked

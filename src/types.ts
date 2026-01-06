@@ -33,6 +33,7 @@ export interface NotificationProps {
   >;
   colored?: ColoredMode;
   customIcon?: React.ReactNode;
+  subMessageNLines?: number;
 }
 
 export interface NotificationsProviderProps {

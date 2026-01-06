@@ -18,6 +18,8 @@ export function useNotifications(): {
   darkTheme: Record<NotificationProps["type"], NotificationThemeType>;
   pauseAutoClose: (id: string) => void;
   resumeAutoClose: (id: string) => void;
+  pauseAllAutoClose: () => void;
+  resumeAllAutoClose: () => void;
 } {
   const ctx = useContext(NotificationContext);
   if (!ctx) {
